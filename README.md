@@ -1,6 +1,6 @@
 # ghostvendor-demo-app
 
-A deliberately fragile Python web service that calls Stripe and SendGrid with no resilience handling. Built as the target application for [GhostVendor](https://github.com/NithinBR-AI/ghostvendor) — an autonomous dependency resilience engineer.
+A deliberately fragile Python web service that calls Stripe and SendGrid with no resilience handling. Built as the target application for [GhostVendor](https://github.com/NithinBR-AI/ghostvendor) — an autonomous dependency resilience engineer built for the [Nebius × NVIDIA Global AI Hackathon](https://nebiusglobalaihackathon.devpost.com).
 
 ---
 
@@ -46,6 +46,7 @@ ghostvendor-demo-app/
 │           ├── stripe.py        # Raw Stripe API calls
 │           └── sendgrid.py      # Raw SendGrid API calls
 ├── tests/
+│   ├── __init__.py
 │   ├── test_charge.py
 │   └── test_notify.py
 ├── main.py                      # Entrypoint
@@ -62,8 +63,11 @@ git clone https://github.com/NithinBR-AI/ghostvendor-demo-app.git
 cd ghostvendor-demo-app
 
 python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+# source .venv/bin/activate
 
 pip install -e ".[dev]"
 
