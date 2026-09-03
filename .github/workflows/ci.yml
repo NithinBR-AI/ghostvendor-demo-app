@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      stripe_base_url:
+        description: "Stripe base URL (override for Evil Twin)"
+        required: false
+        default: "https://api.stripe.com"
+      sendgrid_base_url:
+        description: "SendGrid base URL (override for Evil Twin)"
+        required: false
+        default: "https://api.sendgrid.com"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      STRIPE_API_KEY: sk_test_fake
+      SENDGRID_API_KEY: SG.fake
+      STRIPE_BASE_URL: ${{ github.event.inputs.stripe_base_url || 'https://api.stripe.com' }}
+      SENDGRID_BASE_URL: ${{ github.event.inputs.sendgrid_base_url || 'https://api.sendgrid.com' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run tests
+        run: pytest tests/ -v
