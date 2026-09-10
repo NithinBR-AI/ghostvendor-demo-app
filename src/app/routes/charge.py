@@ -26,4 +26,6 @@ def charge():
         currency=data.get("currency", "usd"),
         payment_method=data["payment_method"],
     )
+    if "error" in result:
+        return jsonify({"error": result.get("message", "vendor error")}), 503
     return jsonify({"payment_intent_id": result["id"], "status": result["status"]})
