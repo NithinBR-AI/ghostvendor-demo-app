@@ -2,7 +2,7 @@
 
 import os
 import requests
-
+import time
 
 def create_payment_intent(amount: int, currency: str, payment_method: str) -> dict:
     """
@@ -23,14 +23,36 @@ def create_payment_intent(amount: int, currency: str, payment_method: str) -> di
     base_url = os.environ.get("STRIPE_BASE_URL", "https://api.stripe.com")
     api_key = os.environ["STRIPE_API_KEY"]
 
-    response = requests.post(
-        f"{base_url}/v1/payment_intents",
-        auth=(api_key, ""),
-        data={
-            "amount": amount,
-            "currency": currency,
-            "payment_method": payment_method,
-            "confirm": True,
-        },
-    )
-    return response.json()
+    for attempt in range(2):
+        try:
+            response = requests.post(
+                f"{base_url}/v1/payment_intents",
+                auth=(api_key, ""),
+                data={
+                    "amount": amount,
+                    "currency": currency,
+                    "payment_method": payment_method,
+                    "confirm": True,
+                },
+                timeout=10,
+            )
+            if response.status_code in (429, 502, 503):
+                if attempt == 0:
+                    time.sleep(1)
+                    continue
+                return {"error": "transient_failure", "message": f"Vendor returned {response.status_code} after retry"}
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.Timeout:
+            if attempt == 0:
+                time.sleep(1)
+                continue
+            return {"error": "timeout", "message": "Request to Stripe timed out after retry"}
+        except requests.exceptions.RequestException as e:
+            if attempt == 0:
+                time.sleep(1)
+                continue
+            return {"error": "request_failed", "message": str(e)}
+        except ValueError:
+            return {"error": "malformed_response", "message": "Stripe returned invalid JSON"}
+    return {"error": "unknown", "message": "Unexpected retry loop exit"}
