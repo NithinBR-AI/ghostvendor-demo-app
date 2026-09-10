@@ -22,10 +22,12 @@ def notify():
         No error handling — a 502 or timeout propagates silently or crashes.
     """
     data = request.json
-    code = sendgrid.send_email(
+    result = sendgrid.send_email(
         to=data["to"],
         subject=data["subject"],
         body=data["body"],
         from_email=data.get("from", "noreply@ghostvendor.dev"),
     )
-    return jsonify({"status": "sent", "code": code})
+    if isinstance(result, dict) and "error" in result:
+        return jsonify({"error": result.get("message", "vendor error")}), 503
+    return jsonify({"status": "sent", "code": result})
