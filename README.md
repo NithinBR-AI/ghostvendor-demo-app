@@ -15,6 +15,8 @@ Two endpoints:
 
 Both endpoints make raw HTTP calls with no retry logic, no timeout, no circuit breaker, and no fallback. A vendor outage causes immediate failure.
 
+> **Note:** `main` is currently a stub scaffold — vendor integrations arrive via `feature/add-vendor-integrations`. GhostVendor fires on that PR.
+
 ---
 
 ## Why it's intentionally fragile
@@ -23,7 +25,7 @@ This repo exists to demonstrate GhostVendor's value. GhostVendor will:
 
 1. Discover the Stripe and SendGrid dependencies via static analysis
 2. Generate Evil Twin simulators that impersonate those APIs
-3. Inject real failure modes (502, timeout, malformed JSON) via GitHub Actions
+3. Inject real failure modes (502, timeout, malformed JSON) via the Streamlit-triggered pipeline
 4. Diagnose what breaks and why
 5. Generate a minimal resilience patch
 6. Open a PR — only after CI proves the fix survives chaos
