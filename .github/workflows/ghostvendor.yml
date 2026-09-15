@@ -1,0 +1,18 @@
+name: GhostVendor Resilience Pipeline
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  ghostvendor:
+    runs-on: self-hosted
+    steps:
+      - name: Run GhostVendor pipeline
+        shell: pwsh
+        run: |
+          cd C:\Users\nbelavinako\Desktop\Personal\NvidiaHack\ghostvendor
+          .\.venv\Scripts\python.exe main.py NithinBR-AI/ghostvendor-demo-app `
+            --triggered-by ${{ github.actor }} `
+            --pr ${{ github.event.pull_request.number }} `
+            --branch ${{ github.head_ref }}
