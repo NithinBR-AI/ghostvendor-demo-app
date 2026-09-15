@@ -9,7 +9,7 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Run GhostVendor pipeline
-        shell: pwsh
+        shell: powershell
         run: |
           cd C:\Users\nbelavinako\Desktop\Personal\NvidiaHack\ghostvendor
           .\.venv\Scripts\python.exe main.py NithinBR-AI/ghostvendor-demo-app `
