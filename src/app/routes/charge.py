@@ -1,5 +1,7 @@
 """POST /charge — process a payment via Stripe."""
 
+import logging
+
 from flask import Blueprint, request, jsonify
 from app.clients import stripe
 
@@ -21,11 +23,16 @@ def charge():
         No error handling — any Stripe failure propagates as an unhandled exception.
     """
     data = request.json
-    result = stripe.create_payment_intent(
-        amount=data["amount"],
-        currency=data.get("currency", "usd"),
-        payment_method=data["payment_method"],
-    )
+    try:
+        result = stripe.create_payment_intent(
+            amount=data["amount"],
+            currency=data.get("currency", "usd"),
+            payment_method=data["payment_method"],
+        )
+    except Exception:
+        logging.getLogger(__name__).warning("Stripe create_payment_intent raised an exception", exc_info=True)
+        return jsonify({"error": "vendor error"}), 503
     if isinstance(result, dict) and "error" in result:
-        return jsonify(result), 503
+        logging.getLogger(__name__).warning("Stripe create_payment_intent returned error: %s", result.get("error"))
+        return jsonify({"error": "vendor error"}), 503
     return jsonify({"payment_intent_id": result["id"], "status": result["status"]})
