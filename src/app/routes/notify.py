@@ -29,5 +29,15 @@ def notify():
         from_email=data.get("from", "noreply@ghostvendor.dev"),
     )
     if isinstance(result, dict) and "error" in result:
-        return jsonify(result), 503
-    return jsonify({"status": "sent", "code": result})
+        if result["error"] == "timeout":
+            return jsonify(result), 504
+        return jsonify(result), 502
+    if isinstance(result, int):
+        if result == 429:
+            return jsonify({"error": "rate_limited", "message": "SendGrid returned 429"}), 429
+        if result >= 500:
+            return jsonify({"error": "vendor_error", "message": f"SendGrid returned {result}"}), 502
+        if result == 202:
+            return jsonify({"status": "sent", "code": result})
+        return jsonify({"status": "sent", "code": result})
+    return jsonify({"error": "unexpected_response", "message": "Unexpected response from SendGrid"}), 502
