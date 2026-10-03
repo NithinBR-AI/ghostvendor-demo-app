@@ -30,4 +30,6 @@ def notify():
     )
     if isinstance(result, dict) and "error" in result:
         return jsonify(result), 503
+    if not isinstance(result, int) or result >= 400:
+        return jsonify({"error": "vendor error", "status_code": result if isinstance(result, int) else 0}), 503
     return jsonify({"status": "sent", "code": result})
