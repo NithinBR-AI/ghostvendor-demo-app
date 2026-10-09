@@ -21,11 +21,14 @@ def charge():
         No error handling — any Stripe failure propagates as an unhandled exception.
     """
     data = request.json
-    result = stripe.create_payment_intent(
-        amount=data["amount"],
-        currency=data.get("currency", "usd"),
-        payment_method=data["payment_method"],
-    )
+    try:
+        result = stripe.create_payment_intent(
+            amount=data["amount"],
+            currency=data.get("currency", "usd"),
+            payment_method=data["payment_method"],
+        )
+    except Exception as e:
+        return jsonify({"error": "vendor_error", "message": str(e)}), 503
     if isinstance(result, dict) and "error" in result:
         return jsonify(result), 503
     return jsonify({"payment_intent_id": result["id"], "status": result["status"]})
