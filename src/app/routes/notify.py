@@ -1,5 +1,7 @@
 """POST /notify — send a transactional email via SendGrid."""
 
+import logging
+
 from flask import Blueprint, request, jsonify
 from app.clients import sendgrid
 
@@ -22,12 +24,20 @@ def notify():
         No error handling — a 502 or timeout propagates silently or crashes.
     """
     data = request.json
-    result = sendgrid.send_email(
-        to=data["to"],
-        subject=data["subject"],
-        body=data["body"],
-        from_email=data.get("from", "noreply@ghostvendor.dev"),
-    )
+    try:
+        result = sendgrid.send_email(
+            to=data["to"],
+            subject=data["subject"],
+            body=data["body"],
+            from_email=data.get("from", "noreply@ghostvendor.dev"),
+        )
+    except Exception as e:
+        logging.warning("SendGrid call raised exception: %s", e)
+        return jsonify({"error": "vendor error", "message": str(e)}), 503
     if isinstance(result, dict) and "error" in result:
+        logging.warning("SendGrid returned error dict: %s", result)
         return jsonify(result), 503
+    if isinstance(result, int) and result >= 400:
+        logging.warning("SendGrid returned non-2xx status: %s", result)
+        return jsonify({"error": "vendor error", "message": f"SendGrid returned {result}"}), 503
     return jsonify({"status": "sent", "code": result})
