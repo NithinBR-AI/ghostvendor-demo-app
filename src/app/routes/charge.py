@@ -21,11 +21,25 @@ def charge():
         No error handling — any Stripe failure propagates as an unhandled exception.
     """
     data = request.json
-    result = stripe.create_payment_intent(
-        amount=data["amount"],
-        currency=data.get("currency", "usd"),
-        payment_method=data["payment_method"],
-    )
+    try:
+        result = stripe.create_payment_intent(
+            amount=data["amount"],
+            currency=data.get("currency", "usd"),
+            payment_method=data["payment_method"],
+        )
+    except Exception as e:
+        return jsonify({"error": "vendor_error", "message": str(e)}), 502
     if isinstance(result, dict) and "error" in result:
-        return jsonify(result), 503
-    return jsonify({"payment_intent_id": result["id"], "status": result["status"]})
+        error_type = result.get("error", "unknown")
+        if error_type == "timeout":
+            return jsonify(result), 504
+        elif error_type == "retry_failed":
+            return jsonify(result), 502
+        elif error_type == "parse_error":
+            return jsonify(result), 502
+        else:
+            return jsonify(result), 502
+    try:
+        return jsonify({"payment_intent_id": result["id"], "status": result["status"]})
+    except (KeyError, TypeError):
+        return jsonify({"error": "unexpected_response", "message": "Stripe response missing expected fields"}), 502
