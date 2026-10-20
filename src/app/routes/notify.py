@@ -30,4 +30,6 @@ def notify():
     )
     if isinstance(result, dict) and "error" in result:
         return jsonify(result), 503
+    if not isinstance(result, int) or result < 200 or result >= 300:
+        return jsonify({"error": "vendor_error", "message": f"SendGrid returned unexpected status {result}"}), 503
     return jsonify({"status": "sent", "code": result})
