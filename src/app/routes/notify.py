@@ -2,6 +2,7 @@
 
 from flask import Blueprint, request, jsonify
 from app.clients import sendgrid
+import logging
 
 notify_bp = Blueprint("notify", __name__)
 
@@ -10,13 +11,18 @@ notify_bp = Blueprint("notify", __name__)
 def notify():
     data = request.json
     if data is None or "to" not in data or "subject" not in data or "body" not in data:
-        return jsonify({"error": "Missing required fields"}), 400
-    result = sendgrid.send_email(
-        to=data["to"],
-        subject=data["subject"],
-        body=data["body"],
-        from_email=data.get("from", "noreply@ghostvendor.dev"),
-    )
-    if isinstance(result, dict) and "error" in result:
+        return jsonify({"error": "missing required fields"}), 400
+    try:
+        result = sendgrid.send_email(
+            to=data["to"],
+            subject=data["subject"],
+            body=data["body"],
+            from_email=data.get("from", "noreply@ghostvendor.dev"),
+        )
+    except Exception:
+        logging.getLogger(__name__).warning("SendGrid call failed with exception", exc_info=True)
         return jsonify({"error": "vendor error"}), 503
-    return jsonify({"status": "sent", "code": result.get("status_code", 202)})
+    if not isinstance(result, dict) or "error" in result:
+        logging.getLogger(__name__).warning("SendGrid returned error: %s", result)
+        return jsonify({"error": "vendor error"}), 503
+    return jsonify({"status": "sent", "code": result.get("status_code", 200)})
