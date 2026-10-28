@@ -1,5 +1,65 @@
-"""SendGrid API client — stub, not yet implemented."""
+"""SendGrid API client."""
+
+import os
+import random
+import time
+import uuid
+import requests
 
 
-def send_email(to: str, subject: str, body: str, from_email: str = "noreply@ghostvendor.dev") -> int:
-    raise NotImplementedError("SendGrid integration not implemented")
+def send_email(to: str, subject: str, body: str, from_email: str = "noreply@ghostvendor.dev"):
+    base_url = os.environ.get("SENDGRID_BASE_URL", "https://api.sendgrid.com")
+    api_key = os.environ["SENDGRID_API_KEY"]
+    idempotency_key = str(uuid.uuid4())
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                f"{base_url}/v3/mail/send",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "Idempotency-Key": idempotency_key,
+                },
+                json={
+                    "personalizations": [{"to": [{"email": to}]}],
+                    "from": {"email": from_email},
+                    "subject": subject,
+                    "content": [{"type": "text/plain", "value": body}],
+                },
+                timeout=10,
+            )
+        except requests.exceptions.Timeout:
+            return {"error": "timeout", "message": "SendGrid request timed out"}
+        except requests.exceptions.ConnectionError:
+            return {"error": "connection_error", "message": "Failed to connect to SendGrid"}
+        except requests.exceptions.RequestException:
+            return {"error": "request_error", "message": "SendGrid request failed"}
+        if response.status_code >= 400:
+            if response.status_code in (429, 502, 503):
+                if response.status_code == 429:
+                    retry_after = response.headers.get("Retry-After")
+                    if retry_after is not None:
+                        try:
+                            retry_after = min(int(retry_after), 10)
+                        except ValueError:
+                            retry_after = None
+                    if retry_after is not None:
+                        time.sleep(retry_after + random.uniform(0, 0.5))
+                    else:
+                        time.sleep(2 ** attempt + random.uniform(0, 0.5))
+                else:
+                    time.sleep(2 ** attempt + random.uniform(0, 0.5))
+                last_error = {"error": "vendor_error", "status_code": response.status_code}
+                continue
+            return {"error": "vendor_error", "status_code": response.status_code}
+        if response.text:
+            try:
+                body_parsed = response.json()
+            except ValueError:
+                return {"error": "malformed_response", "message": "SendGrid response is not valid JSON"}
+            if not isinstance(body_parsed, dict) or not body_parsed:
+                return {"error": "empty_response", "message": "SendGrid response body is empty"}
+            return body_parsed
+        return {"status_code": response.status_code}
+    return last_error
